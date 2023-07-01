@@ -1,0 +1,52 @@
+# depslib dependency file v1.0
+1688047121 source:/home/nicolasi/Development/wx/chat/dh.cpp
+	"dh.h"
+
+1688047181 /home/nicolasi/Development/wx/chat/dh.h
+	<iostream>
+	<cstring>
+	<cmath>
+
+1688146165 source:/home/nicolasi/Development/wx/chat/gui.cpp
+	<wx/wxprec.h>
+	<wx/wx.h>
+	<wx/sizer.h>
+	<wx/textctrl.h>
+	<wx/button.h>
+	<wx/stattext.h>
+	<wx/richtext/richtextctrl.h>
+	<wx/choice.h>
+	<wx/thread.h>
+	"manager.h"
+
+1688050001 /home/nicolasi/Development/wx/chat/manager.h
+	<iostream>
+	<string>
+	<tuple>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<unistd.h>
+	<string.h>
+	"sdes.h"
+	"rc4.h"
+	"dh.h"
+
+1688049991 /home/nicolasi/Development/wx/chat/sdes.h
+	<iostream>
+	<string>
+
+1688047019 /home/nicolasi/Development/wx/chat/rc4.h
+	<iostream>
+	<cstring>
+
+1688052143 source:/home/nicolasi/Development/wx/chat/manager.cpp
+	"manager.h"
+
+1688050132 source:/home/nicolasi/Development/wx/chat/rc4.cpp
+	"rc4.h"
+
+1688052318 source:/home/nicolasi/Development/wx/chat/sdes.cpp
+	<iostream>
+	<string>
+	"sdes.h"
+
