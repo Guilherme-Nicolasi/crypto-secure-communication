@@ -50,3 +50,54 @@
 	<string>
 	"sdes.h"
 
+1688251845 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/dh.cpp
+	"dh.h"
+
+1688251845 /home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/dh.h
+	<iostream>
+	<cstring>
+	<cmath>
+
+1688251845 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/gui.cpp
+	<wx/wxprec.h>
+	<wx/wx.h>
+	<wx/sizer.h>
+	<wx/textctrl.h>
+	<wx/button.h>
+	<wx/stattext.h>
+	<wx/richtext/richtextctrl.h>
+	<wx/choice.h>
+	<wx/thread.h>
+	"manager.h"
+
+1688334838 /home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/manager.h
+	<iostream>
+	<string>
+	<tuple>
+	<sys/socket.h>
+	<arpa/inet.h>
+	<unistd.h>
+	<string.h>
+	"sdes.h"
+	"rc4.h"
+	"dh.h"
+
+1688251845 /home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/sdes.h
+	<iostream>
+	<string>
+
+1688251845 /home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/rc4.h
+	<iostream>
+	<cstring>
+
+1688335832 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/manager.cpp
+	"manager.h"
+
+1688251845 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/rc4.cpp
+	"rc4.h"
+
+1688335811 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/sdes.cpp
+	<iostream>
+	<string>
+	"sdes.h"
+

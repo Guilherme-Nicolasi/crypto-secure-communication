@@ -21,6 +21,7 @@ class Manager {
         RC4 rc4;
 
         bool ip_isvalid(const std::string& ip);
+        std::string random(int bytes);
 
     public:
         bool ip_valid(const std::string& ip);

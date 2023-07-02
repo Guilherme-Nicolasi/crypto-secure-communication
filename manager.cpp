@@ -38,6 +38,12 @@ bool Manager::ip_valid(const std::string& ip) {
     return ip_isvalid(ip);
 }
 
+std::string Manager::random(int bytes){
+    char trash[bytes + 1]; //memory trash
+    trash[bytes] = '\0';
+    return sdes.encode(std::string(trash),S_DES::CBC);
+}
+
 bool Manager::start_server() {
     if(local_server_socket != -1)
         close(local_server_socket);

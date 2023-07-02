@@ -85,10 +85,10 @@ int S_DES::encode_integer(int in, int key_1, int key_2) {
     return permutation(in, 8, MAP_REVERSE_IP, 8);
 }
 
-std::string S_DES::encode(const std::string& data, S_DES::mode mode) {
+std::string S_DES::encode(const std::string& data, S_DES::mode m) {
     std::string cipher;
 
-    switch(mode) {
+    switch(m) {
         case ECB:
             for(char plain : data)
                 cipher += (char)encode_integer((int)plain, subkeys[0], subkeys[1]);
@@ -107,10 +107,10 @@ std::string S_DES::encode(const std::string& data, S_DES::mode mode) {
     return "";
 }
 
-std::string S_DES::decode(const std::string& data, S_DES::mode mode) {
+std::string S_DES::decode(const std::string& data, S_DES::mode m) {
     std::string plain = "";
 
-    switch(mode) {
+    switch(m) {
         case ECB:
             for(unsigned int cipher : data)
                 plain += (char)encode_integer(cipher, subkeys[1], subkeys[0]);
