@@ -19,18 +19,23 @@ class Manager {
         sockaddr_in destination;
         S_DES sdes;
         RC4 rc4;
+        int sharedKey;
+        int publicKey;
+        DH dh;
 
         bool ip_isvalid(const std::string& ip);
-        std::string random(int bytes);
 
     public:
         bool ip_valid(const std::string& ip);
+        std::string random(int bytes);
+        int getSharedKey();
         bool start_server();
         Manager();
         ~Manager();
         enum encoding {
             Sdes,
-            Rc4
+            Rc4,
+            Dh
         };
         enum smode {
             ECB = S_DES::ECB,

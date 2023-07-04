@@ -38,7 +38,7 @@ bool Manager::ip_valid(const std::string& ip) {
     return ip_isvalid(ip);
 }
 
-std::string Manager::random(int bytes){
+std::string Manager::random(int bytes) {
     char trash[bytes + 1]; //memory trash
     trash[bytes] = '\0';
     return sdes.encode(std::string(trash),S_DES::CBC);
@@ -71,7 +71,7 @@ bool Manager::start_server() {
     local_server.sin_port = htons(3000);
 
     if(bind(local_server_socket, (struct sockaddr*)&local_server, sizeof(local_server)) == -1) {
-        std::cerr << "F\nailed to bind socket.\n" << std::endl;
+        std::cerr << "\nFailed to bind socket.\n" << std::endl;
         close(local_server_socket);
         return false;
     }
@@ -85,10 +85,21 @@ bool Manager::start_server() {
     return true;
 }
 
+int Manager::getSharedKey() {
+    return sharedKey;
+}
+
 Manager::Manager() {
     destination.sin_family = AF_INET;
     destination.sin_port = htons(3000);
     local_server_socket = -1;
+
+    int prime = 12;
+    int generator = 18;
+    int privateKey = 22;
+
+    dh.set_DH(prime, generator, privateKey);
+    publicKey = dh.PublicKey();
 }
 
 Manager::~Manager() {
@@ -162,6 +173,26 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice, Manag
         case Rc4:
             cipher = rc4.encode(plain);
         break;
+        case Dh:
+            send(local_server_socket, std::to_string(publicKey).c_str(), std::to_string(publicKey).size(), 0);
+
+            char publicKeyBuffer[4096];
+
+            bool status = false;
+            std::string key;
+            std::string client_ip = "0";
+
+            char destination_ip[INET_ADDRSTRLEN];
+            inet_ntop(AF_INET,&(destination.sin_addr),destination_ip,INET_ADDRSTRLEN);
+            std::string destination_str(destination_ip);
+
+            while(client_ip != destination_str)
+                std::tie(status,key,client_ip) = receive(Dh,Manager::CBC);
+
+            int destPublicKey = std::stoi(key);
+            sharedKey = dh.SharedKey(destPublicKey);
+            return true;
+
     }
 
     int status = send(sockfd, cipher.c_str(), cipher.size(), 0);
@@ -209,9 +240,12 @@ std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding ch
         case Rc4:
             return std::make_tuple(true, rc4.encode(cipher), std::string(client_ip));
         break;
+        case Dh:
+            return std::make_tuple(true, cipher, std::string(client_ip));
+            break;
         default:
             return std::make_tuple(false, "", "");
         break;
-    }
 
+    }
 }

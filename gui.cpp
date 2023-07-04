@@ -9,6 +9,7 @@
 #include <wx/richtext/richtextctrl.h>
 #include <wx/choice.h>
 #include <wx/thread.h>
+#include <iostream>
 #include "manager.h"
 
 class Chat : public wxFrame, public wxThread {
@@ -16,50 +17,65 @@ class Chat : public wxFrame, public wxThread {
         wxRichTextCtrl* mensagemDisplay; // Mensagem exibida no display
         wxTextCtrl* mensagem; // Mensagem
         wxTextCtrl* destino; // IP destino
+        wxButton* configurar; // Botão configurar
         wxButton* enviar; // Botão enviar
         wxChoice* criptografia; // Caixa de seleção para escolher S-DES ou RC4
         wxChoice* modeSdes; // Caixa de seleção para escolher S-DES ou RC4
         wxTextCtrl* chave; // Chave da criptografia
         wxCheckBox* dhCheckBox; // Check box para DH
         Manager manager; // Objeto manager para a comunicação via socket TCP/IP, envio e recepção de mensagens
+        bool statusDh = false;
 
         // Método para o evento enviar
-        void BotaoEnviar(wxCommandEvent& event) {
-            // Obter os valores da "Mensagem", "IP destino", "Cripto" "Chave"
-            wxString mens = mensagem->GetValue();
-            wxString dest = destino->GetValue();
-            wxString cripto = criptografia->GetString(criptografia->GetSelection());
-            wxString smode = modeSdes->GetString(modeSdes->GetSelection());
-            wxString chaveCripto = chave->GetValue();
-            bool isSelected = dhCheckBox->IsChecked();
-
-            /*if(mens.IsEmpty() || dest.IsEmpty() || (chaveCripto.IsEmpty() || !isSelected)) {
-                wxMessageBox("Preencha todos os campos para enviar a mensagem.", "Erro", wxICON_ERROR | wxOK);
-                return;
+        void BotaoConfigurar(wxCommandEvent& event) {
+            /*if(!isSelected) {
+                chaveCripto = chave->GetValue();
+            } else {
+                chaveCripto = std::to_string(manager.getSharedKey());
             }*/
-
             // Verificar se o IP destino é válido
-            if(!manager.ip_valid(dest.ToStdString())) {
+            if(!manager.ip_valid(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: IP destino inválido.", wxT("Erro: IP destino inválido."), wxICON_ERROR | wxOK);
                 return;
             }
 
             // Atribuir o IP de destino
-            if(!manager.set_ip(dest.ToStdString())) {
+            if(!manager.set_ip(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: Não foi possível atribuir o IP de destino.", wxT("Erro: Não foi possível atribuir o IP de destino."), wxICON_ERROR | wxOK);
                 return;
             }
 
             // Atribuir a chave de criptografia
-            if(!isSelected) {
-                if(!manager.set_key(chaveCripto.ToStdString(), (cripto == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4)) {
+            if(!(dhCheckBox->IsChecked())) {
+                if(!manager.set_key((chave->GetValue()).ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4)) {
                     wxMessageBox("Erro: Não foi possível atribuir a chave.", wxT("Erro: Não foi possível atribuir a chave."), wxICON_ERROR | wxOK);
                     return;
                 }
+            } else {
+                if(!(criptografia->GetString(criptografia->GetSelection()) == wxT("RC4"))) {
+                    wxMessageBox("Erro: Mude a criptografia para RC4.", wxT("Erro: Mude a criptografia para RC4."), wxICON_ERROR | wxOK);
+                    return;
+                }
+
+                if(!(statusDh)) {
+                    manager.dispatch(nullptr, Manager::Dh, Manager::CBC);
+                    std::ostream stream(chave);
+                    stream << std::to_string(manager.getSharedKey());
+                    statusDh = true;
+                } else if(!(dhCheckBox->IsChecked())) statusDh = false;
+            }
+        }
+
+        // Método para o evento enviar
+        void BotaoEnviar(wxCommandEvent& event) {
+            // Verificar se todos os campos foram preenchidos
+            if(mensagem->GetValue().IsEmpty() || destino->GetValue().IsEmpty() || (!(dhCheckBox->IsChecked()) && chave->GetValue().IsEmpty())) {
+                wxMessageBox("Preencha todos os campos para enviar a mensagem.", "Preencha todos os campos para enviar a mensagem.", wxICON_ERROR | wxOK);
+                return;
             }
 
             // Enviar a mensagem
-            if(!manager.dispatch(mens.ToStdString(), (cripto == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4, smode == "ECB" ? Manager::smode::ECB : Manager::smode::CBC)) {
+            if(!manager.dispatch(mensagem->GetValue().ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4, modeSdes->GetString(modeSdes->GetSelection()) == wxT("ECB") ? Manager::smode::ECB : Manager::smode::CBC)) {
                 wxMessageBox(wxT("Erro: Não foi possível enviar a mensagem."), wxT("Erro: Não foi possível enviar a mensagem."), wxICON_ERROR | wxOK);
                 return;
             }
@@ -76,6 +92,7 @@ class Chat : public wxFrame, public wxThread {
                 Close();
                 return;
             }
+
             // Criar um sizer vertical para todos os componentes da GUI
             wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
             // Criar um sizer horizontal para os text box e o botão
@@ -90,7 +107,6 @@ class Chat : public wxFrame, public wxThread {
 
             // Criar um um text box para inserir a mensagem
             mensagem = new wxTextCtrl(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
-            mensagem->Connect(wxEVT_TEXT_ENTER, wxCommandEventHandler(Chat::BotaoEnviar), NULL, this);
             // Inserir text box da mensagem no sizer horizontal
             inputSizer->Add(mensagem, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
             mensagem->SetFocus();
@@ -164,6 +180,14 @@ class Chat : public wxFrame, public wxThread {
             // Inserir o text box da chave da criptografia no sizer horizontal
             inputSizer->Add(chave, 1, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
+            // Criar um botão para configurar
+            configurar = new wxButton(this, wxID_ANY, wxT("Configurar"));
+            configurar->Connect(wxEVT_BUTTON, wxCommandEventHandler(Chat::BotaoConfigurar), NULL, this);
+            // Remover a borda do botão
+            configurar->SetWindowStyleFlag(wxBORDER_NONE);
+            // Inserir o bot�o "Enviar" no sizer horizontal
+            inputSizer->Add(configurar, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT | wxBOTTOM, 5);
+
             // Criar um botão para enviar a mensagem
             enviar = new wxButton(this, wxID_ANY, wxT("Enviar"));
             enviar->Connect(wxEVT_BUTTON, wxCommandEventHandler(Chat::BotaoEnviar), NULL, this);
@@ -185,6 +209,8 @@ class Chat : public wxFrame, public wxThread {
             dhLabel->SetForegroundColour(wxColour(255, 255, 255));
             modeLabel->SetForegroundColour(wxColour(255, 255, 255));
             chaveLabel->SetForegroundColour(wxColour(255, 255, 255));
+            configurar->SetBackgroundColour(wxColour(2, 104, 115));
+            configurar->SetForegroundColour(wxColour(255, 255, 255));
             enviar->SetBackgroundColour(wxColour(2, 104, 115));
             enviar->SetForegroundColour(wxColour(255, 255, 255));
             mensagemDisplay->SetBackgroundColour(wxColour(2, 75, 115));
@@ -198,6 +224,7 @@ class Chat : public wxFrame, public wxThread {
             SetSizer(mainSizer);
 
             // Registrar os eventos dos text box, selection list e do button
+            configurar->Bind(wxEVT_BUTTON, &Chat::BotaoConfigurar, this);
             mensagem->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             destino->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             criptografia->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
@@ -229,20 +256,16 @@ class Chat : public wxFrame, public wxThread {
 
                 if(received) {
                     wxMutexGuiEnter();
-                    wxString receivedMessage = wxString::FromUTF8(message);
-                    wxString sourceMessage = wxString::FromUTF8(ip);
                     // Aplicar o estilo
                     mensagemDisplay->BeginStyle(messageStyle);
                         // Imprimir a mensagem no display
-                        //mensagemDisplay->AppendText(sourceMessage + wxT(": ") + receivedMessage + wxT("\n"));
-                        mensagemDisplay->WriteText(sourceMessage + wxT(": ") + receivedMessage + wxT("\n"));
+                        mensagemDisplay->WriteText(wxString::FromUTF8(ip) + wxT(": ") + wxString::FromUTF8(message) + wxT("\n"));
                     mensagemDisplay->EndStyle();
                     wxMutexGuiLeave();
 
                     // Rolagem automática do display
                     mensagemDisplay->ShowPosition(mensagemDisplay->GetLastPosition());
                 }
-
                 wxThread::Sleep(100);
             }
 
