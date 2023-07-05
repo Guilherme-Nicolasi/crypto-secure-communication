@@ -7,16 +7,16 @@
 
 class DH {
     private:
-        unsigned long long p; // Prime number
-        unsigned long long g; // Primitive Root
-        unsigned long long x; // Private Key
-        unsigned long long sharedKey; // Shared Key
-
+        int p; // Prime number
+        int g; // Primitive Root
+        int x; // Private Key
+        int sharedKey; // Shared Key
 
     public:
-        DH(unsigned long long prime, unsigned long long generator, unsigned long long privateKey);
-        unsigned long long SharedKey(unsigned long long destPublicKey);
-        unsigned long long PublicKey();
+        void set_DH(int prime, int generator, int privateKey);
+        int PublicKey();
+        int SharedKey(int destPublicKey);
+        DH(int prime, int primitiveRoot, int privateKey);
 };
 
 #endif // DH_H

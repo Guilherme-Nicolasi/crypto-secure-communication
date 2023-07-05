@@ -20,19 +20,26 @@ class Chat : public wxFrame, public wxThread {
         wxButton* configurar; // Botão configurar
         wxButton* enviar; // Botão enviar
         wxChoice* criptografia; // Caixa de seleção para escolher S-DES ou RC4
-        wxChoice* modeSdes; // Caixa de seleção para escolher S-DES ou RC4
         wxTextCtrl* chave; // Chave da criptografia
         wxCheckBox* dhCheckBox; // Check box para DH
         Manager manager; // Objeto manager para a comunicação via socket TCP/IP, envio e recepção de mensagens
-        bool statusDh = false;
+
+        Manager::encoding resolve_encoding(){
+            std::string choice((criptografia->GetString((criptografia->GetSelection()))).mb_str());
+
+            if(choice == "SDES_ECB"){
+                return Manager::Sdes_ECB;
+            }
+            else if("SDES_CBC"){
+                return Manager::Sdes_CBC;
+            }
+            else if("RC4"){
+                return Manager::Rc4;
+            }
+        }
 
         // Método para o evento enviar
         void BotaoConfigurar(wxCommandEvent& event) {
-            /*if(!isSelected) {
-                chaveCripto = chave->GetValue();
-            } else {
-                chaveCripto = std::to_string(manager.getSharedKey());
-            }*/
             // Verificar se o IP destino é válido
             if(!manager.ip_valid(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: IP destino inválido.", wxT("Erro: IP destino inválido."), wxICON_ERROR | wxOK);
@@ -44,25 +51,12 @@ class Chat : public wxFrame, public wxThread {
                 wxMessageBox("Erro: Não foi possível atribuir o IP de destino.", wxT("Erro: Não foi possível atribuir o IP de destino."), wxICON_ERROR | wxOK);
                 return;
             }
-
             // Atribuir a chave de criptografia
             if(!(dhCheckBox->IsChecked())) {
-                if(!manager.set_key((chave->GetValue()).ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4)) {
-                    wxMessageBox("Erro: Não foi possível atribuir a chave.", wxT("Erro: Não foi possível atribuir a chave."), wxICON_ERROR | wxOK);
-                    return;
-                }
-            } else {
-                if(!(criptografia->GetString(criptografia->GetSelection()) == wxT("RC4"))) {
-                    wxMessageBox("Erro: Mude a criptografia para RC4.", wxT("Erro: Mude a criptografia para RC4."), wxICON_ERROR | wxOK);
-                    return;
-                }
-
-                if(!(statusDh)) {
-                    manager.dispatch(nullptr, Manager::Dh, Manager::CBC);
-                    std::ostream stream(chave);
-                    stream << std::to_string(manager.getSharedKey());
-                    statusDh = true;
-                } else if(!(dhCheckBox->IsChecked())) statusDh = false;
+                manager.set_key(std::string(chave->GetValue()),resolve_encoding());
+            }
+            else{
+                manager.key_exchange(resolve_encoding());
             }
         }
 
@@ -75,7 +69,7 @@ class Chat : public wxFrame, public wxThread {
             }
 
             // Enviar a mensagem
-            if(!manager.dispatch(mensagem->GetValue().ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4, modeSdes->GetString(modeSdes->GetSelection()) == wxT("ECB") ? Manager::smode::ECB : Manager::smode::CBC)) {
+            if(!manager.dispatch(mensagem->GetValue().ToStdString(), resolve_encoding())) {
                 wxMessageBox(wxT("Erro: Não foi possível enviar a mensagem."), wxT("Erro: Não foi possível enviar a mensagem."), wxICON_ERROR | wxOK);
                 return;
             }
@@ -133,29 +127,13 @@ class Chat : public wxFrame, public wxThread {
             // Criar uma caixa de seleção para a criptografia
             criptografia = new wxChoice(this, wxID_ANY);
             // Inserir os tipos de criptografia S-DES e RC4 à caixa de seleção
-            criptografia->Append(wxT("SDES"));
+            criptografia->Append(wxT("SDES_ECB"));
+            criptografia->Append(wxT("SDES_CBC"));
             criptografia->Append(wxT("RC4"));
             // Definir a seleção inicial como "S-DES"
             criptografia->SetSelection(0);
             // Inserir a caixa de seleção da criptografia no sizer horizontal
             inputSizer->Add(criptografia, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT | wxBOTTOM, 5);
-
-            // Criar uma label para escolher o modo de operação do S-DES
-            wxStaticText* modeLabel = new wxStaticText(this, wxID_ANY, wxT("Mode:"));
-            // Altera a cor do texto para preto
-            criptoLabel->SetForegroundColour(wxColour(0, 0, 0));
-            // Inserir a label "Mode:" no sizer horizontal
-            inputSizer->Add(modeLabel, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT | wxBOTTOM, 5);
-
-            // Criar uma caixa de seleção para a os modos de operação do S-DES
-            modeSdes = new wxChoice(this, wxID_ANY);
-            // Inserir os modos de operação ECB e CBC à caixa de seleção
-            modeSdes->Append(wxT("ECB"));
-            modeSdes->Append(wxT("CBC"));
-            // Definir a seleção inicial como "ECB"
-            modeSdes->SetSelection(0);
-            // Inserir a caixa de seleção dos modos de operação no sizer horizontal
-            inputSizer->Add(modeSdes, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT | wxBOTTOM, 5);
 
             // Criar uma label para escolher a criptografia
             wxStaticText* dhLabel = new wxStaticText(this, wxID_ANY, wxT("DH:"));
@@ -207,7 +185,6 @@ class Chat : public wxFrame, public wxThread {
             mensLabel->SetForegroundColour(wxColour(255, 255, 255));
             criptoLabel->SetForegroundColour(wxColour(255, 255, 255));
             dhLabel->SetForegroundColour(wxColour(255, 255, 255));
-            modeLabel->SetForegroundColour(wxColour(255, 255, 255));
             chaveLabel->SetForegroundColour(wxColour(255, 255, 255));
             configurar->SetBackgroundColour(wxColour(2, 104, 115));
             configurar->SetForegroundColour(wxColour(255, 255, 255));
@@ -224,12 +201,11 @@ class Chat : public wxFrame, public wxThread {
             SetSizer(mainSizer);
 
             // Registrar os eventos dos text box, selection list e do button
-            configurar->Bind(wxEVT_BUTTON, &Chat::BotaoConfigurar, this);
             mensagem->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             destino->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             criptografia->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
-            modeSdes->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             chave->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
+            configurar->Bind(wxEVT_BUTTON, &Chat::BotaoConfigurar, this);
             enviar->Bind(wxEVT_BUTTON, &Chat::BotaoEnviar, this);
 
             // Cria a thread para recebimento de mensagem
@@ -252,7 +228,7 @@ class Chat : public wxFrame, public wxThread {
                 std::string message;
                 std::string ip;
 
-                std::tie(received, message, ip) = manager.receive(((criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4), modeSdes->GetString(modeSdes->GetSelection()) == "ECB" ? Manager::smode::ECB : Manager::smode::CBC);
+                std::tie(received, message, ip) = manager.receive(resolve_encoding());
 
                 if(received) {
                     wxMutexGuiEnter();

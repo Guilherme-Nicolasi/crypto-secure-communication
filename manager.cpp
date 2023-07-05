@@ -89,15 +89,15 @@ int Manager::getSharedKey() {
     return sharedKey;
 }
 
-Manager::Manager() : dh(12, 18, 22) {
-    
+int Manager::getPublicKey() {
+    return publicKey;
+}
+
+Manager::Manager():dh(12,18,22){
+
     destination.sin_family = AF_INET;
     destination.sin_port = htons(3000);
     local_server_socket = -1;
-
-    int prime = 12;
-    int generator = 18;
-    int privateKey = 22;
 
     publicKey = dh.PublicKey();
 }
@@ -123,7 +123,7 @@ bool Manager::set_key(const std::string& key, Manager::encoding choice) {
         case Sdes_CBC:
         case Sdes_ECB:
             try {
-                int int_key = (std::stoi(key)) % (1 << 11);
+                int int_key = (std::stoi(key)) % ((1 << 11)-1);
                 sdes.update(int_key);
             } catch(...) {
                 std::cerr << "\nSDES key should be numeric\n";
@@ -182,7 +182,7 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice) {
             cipher = rc4.encode(plain);
         break;
 
-        case None: 
+        case None:
         break;
     }
 
@@ -196,7 +196,7 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice) {
     return true;
 }
 
-bool Manager::key_exchange(){
+bool Manager::key_exchange(Manager::encoding choice){
 
     //sends the key
     if(!dispatch(std::to_string(publicKey),None))
@@ -216,8 +216,7 @@ bool Manager::key_exchange(){
 
     //sets the shared key on rc4
     int destPublicKey = std::stoi(key);
-    sharedKey = dh.SharedKey(destPublicKey);
-    rc4.update(std::to_string(sharedKey));
+    set_key(std::to_string(dh.SharedKey(destPublicKey)),choice);
 
     return true;
 }
@@ -251,7 +250,7 @@ std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding ch
 
     std::string cipher(cipher_buffer, cipher_size);
     switch(choice) {
-        
+
         case Sdes_ECB:
             return std::make_tuple(true, sdes.decode(cipher, S_DES::ECB), std::string(client_ip));
         break;
@@ -267,7 +266,7 @@ std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding ch
         case None:
             return std::make_tuple(true, cipher, std::string(client_ip));
         break;
-        
+
         default:
             return std::make_tuple(false, "", "");
         break;

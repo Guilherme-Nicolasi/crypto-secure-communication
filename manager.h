@@ -29,20 +29,25 @@ class Manager {
         bool ip_valid(const std::string& ip);
         std::string random(int bytes);
         int getSharedKey();
+        int getPublicKey();
         bool start_server();
         Manager();
         ~Manager();
+
         enum encoding {
             Sdes_ECB,
             Sdes_CBC,
             Rc4,
             None
         };
+
         bool set_ip(const std::string& ip);
         bool set_key(const std::string& key, encoding choice);
         bool dispatch(const std::string& plain, encoding choice);
-        bool key_exchange();
         std::tuple<bool, std::string, std::string> receive(encoding choice);
+        bool key_exchange(encoding choice);
 };
 
 #endif // MANAGER_H
+
+
