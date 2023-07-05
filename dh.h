@@ -12,11 +12,11 @@ class DH {
         unsigned long long x; // Private Key
         unsigned long long sharedKey; // Shared Key
 
-        unsigned long long PublicKey();
 
     public:
         DH(unsigned long long prime, unsigned long long generator, unsigned long long privateKey);
         unsigned long long SharedKey(unsigned long long destPublicKey);
+        unsigned long long PublicKey();
 };
 
 #endif // DH_H

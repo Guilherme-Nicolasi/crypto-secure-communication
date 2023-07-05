@@ -89,7 +89,8 @@ int Manager::getSharedKey() {
     return sharedKey;
 }
 
-Manager::Manager() {
+Manager::Manager() : dh(12, 18, 22) {
+    
     destination.sin_family = AF_INET;
     destination.sin_port = htons(3000);
     local_server_socket = -1;
@@ -98,7 +99,6 @@ Manager::Manager() {
     int generator = 18;
     int privateKey = 22;
 
-    dh(prime, generator, privateKey);
     publicKey = dh.PublicKey();
 }
 
