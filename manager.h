@@ -33,18 +33,16 @@ class Manager {
         Manager();
         ~Manager();
         enum encoding {
-            Sdes,
+            Sdes_ECB,
+            Sdes_CBC,
             Rc4,
-            Dh
-        };
-        enum smode {
-            ECB = S_DES::ECB,
-            CBC = S_DES::CBC
+            None
         };
         bool set_ip(const std::string& ip);
         bool set_key(const std::string& key, encoding choice);
-        bool dispatch(const std::string& plain, encoding choice, smode mode);
-        std::tuple<bool, std::string, std::string> receive(encoding choice, smode mode);
+        bool dispatch(const std::string& plain, encoding choice);
+        bool key_exchange();
+        std::tuple<bool, std::string, std::string> receive(encoding choice);
 };
 
 #endif // MANAGER_H

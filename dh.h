@@ -16,7 +16,7 @@ class DH {
 
     public:
         DH(unsigned long long prime, unsigned long long generator, unsigned long long privateKey);
-        void SharedKey(unsigned long long destPublicKey);
+        unsigned long long SharedKey(unsigned long long destPublicKey);
 };
 
 #endif // DH_H

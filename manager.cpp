@@ -98,7 +98,7 @@ Manager::Manager() {
     int generator = 18;
     int privateKey = 22;
 
-    dh.set_DH(prime, generator, privateKey);
+    dh(prime, generator, privateKey);
     publicKey = dh.PublicKey();
 }
 
@@ -119,25 +119,27 @@ bool Manager::set_key(const std::string& key, Manager::encoding choice) {
         case Rc4:
             rc4.update(key);
         break;
-        case Sdes:
+
+        case Sdes_CBC:
+        case Sdes_ECB:
             try {
-                int int_key = std::stoi(key);
-                if(int_key > ((1 << 11) - 1)) {
-                    std::cerr << "\nSDES key is too big.\n";
-                    return false;
-                }
+                int int_key = (std::stoi(key)) % (1 << 11);
                 sdes.update(int_key);
             } catch(...) {
                 std::cerr << "\nSDES key should be numeric\n";
                 return false;
             }
         break;
+
+        case None:
+            std::cerr << "Cannot set the key of enconding: None";
+            return false;
     }
 
     return true;
 }
 
-bool Manager::dispatch(const std::string& plain, Manager::encoding choice, Manager::smode mode) {
+bool Manager::dispatch(const std::string& plain, Manager::encoding choice) {
     if(plain.size() > 4096) {
         std::cerr << "\nThe message is too long.\n" << std::endl;
         return false;
@@ -167,32 +169,21 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice, Manag
 
     std::string cipher;
     switch(choice) {
-        case Sdes:
-            cipher = sdes.encode(plain, (S_DES::mode)mode);
+
+        case Sdes_ECB:
+            cipher = sdes.encode(plain, S_DES::ECB);
         break;
+
+        case Sdes_CBC:
+            cipher = sdes.encode(plain, S_DES::CBC);
+        break;
+
         case Rc4:
             cipher = rc4.encode(plain);
         break;
-        case Dh:
-            send(local_server_socket, std::to_string(publicKey).c_str(), std::to_string(publicKey).size(), 0);
 
-            char publicKeyBuffer[4096];
-
-            bool status = false;
-            std::string key;
-            std::string client_ip = "0";
-
-            char destination_ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET,&(destination.sin_addr),destination_ip,INET_ADDRSTRLEN);
-            std::string destination_str(destination_ip);
-
-            while(client_ip != destination_str)
-                std::tie(status,key,client_ip) = receive(Dh,Manager::CBC);
-
-            int destPublicKey = std::stoi(key);
-            sharedKey = dh.SharedKey(destPublicKey);
-            return true;
-
+        case None: 
+        break;
     }
 
     int status = send(sockfd, cipher.c_str(), cipher.size(), 0);
@@ -205,7 +196,33 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice, Manag
     return true;
 }
 
-std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding choice, Manager::smode mode) {
+bool Manager::key_exchange(){
+
+    //sends the key
+    if(!dispatch(std::to_string(publicKey),None))
+        return false;
+
+    bool status = false;
+    std::string key;
+    std::string client_ip = "0";
+
+    char destination_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET,&(destination.sin_addr),destination_ip,INET_ADDRSTRLEN);
+    std::string destination_str(destination_ip);
+
+    //receives the response
+    while(client_ip != destination_str)
+        std::tie(status,key,client_ip) = receive(None);
+
+    //sets the shared key on rc4
+    int destPublicKey = std::stoi(key);
+    sharedKey = dh.SharedKey(destPublicKey);
+    rc4.update(std::to_string(sharedKey));
+
+    return true;
+}
+
+std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding choice) {
     sockaddr_in client{};
     socklen_t client_size = sizeof(client);
 
@@ -234,15 +251,23 @@ std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding ch
 
     std::string cipher(cipher_buffer, cipher_size);
     switch(choice) {
-        case Sdes:
-            return std::make_tuple(true, sdes.decode(cipher, (S_DES::mode)mode), std::string(client_ip));
+        
+        case Sdes_ECB:
+            return std::make_tuple(true, sdes.decode(cipher, S_DES::ECB), std::string(client_ip));
         break;
+
+        case Sdes_CBC:
+            return std::make_tuple(true, sdes.decode(cipher, S_DES::ECB), std::string(client_ip));
+        break;
+
         case Rc4:
             return std::make_tuple(true, rc4.encode(cipher), std::string(client_ip));
         break;
-        case Dh:
+
+        case None:
             return std::make_tuple(true, cipher, std::string(client_ip));
-            break;
+        break;
+        
         default:
             return std::make_tuple(false, "", "");
         break;
