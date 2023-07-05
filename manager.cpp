@@ -56,7 +56,7 @@ bool Manager::start_server() {
     }
 
     struct timeval timeout;
-    timeout.tv_sec = 30;
+    timeout.tv_sec = 2;
     timeout.tv_usec = 0;
 
     if(setsockopt(local_server_socket, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
@@ -256,7 +256,7 @@ std::tuple<bool, std::string, std::string> Manager::receive(Manager::encoding ch
         break;
 
         case Sdes_CBC:
-            return std::make_tuple(true, sdes.decode(cipher, S_DES::ECB), std::string(client_ip));
+            return std::make_tuple(true, sdes.decode(cipher, S_DES::CBC), std::string(client_ip));
         break;
 
         case Rc4:

@@ -23,23 +23,12 @@ class Chat : public wxFrame, public wxThread {
         wxTextCtrl* chave; // Chave da criptografia
         wxCheckBox* dhCheckBox; // Check box para DH
         Manager manager; // Objeto manager para a comunicação via socket TCP/IP, envio e recepção de mensagens
-
-        Manager::encoding resolve_encoding(){
-            std::string choice((criptografia->GetString((criptografia->GetSelection()))).mb_str());
-
-            if(choice == "SDES_ECB"){
-                return Manager::Sdes_ECB;
-            }
-            else if("SDES_CBC"){
-                return Manager::Sdes_CBC;
-            }
-            else if("RC4"){
-                return Manager::Rc4;
-            }
-        }
+        Manager::encoding choice;
 
         // Método para o evento enviar
         void BotaoConfigurar(wxCommandEvent& event) {
+            std::cout << "configuring..." << std::endl;
+
             // Verificar se o IP destino é válido
             if(!manager.ip_valid(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: IP destino inválido.", wxT("Erro: IP destino inválido."), wxICON_ERROR | wxOK);
@@ -47,17 +36,35 @@ class Chat : public wxFrame, public wxThread {
             }
 
             // Atribuir o IP de destino
+            std::cout << "\tip:" << destino->GetValue().ToStdString() << std::endl;
             if(!manager.set_ip(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: Não foi possível atribuir o IP de destino.", wxT("Erro: Não foi possível atribuir o IP de destino."), wxICON_ERROR | wxOK);
                 return;
             }
+
+            std::string str((criptografia->GetString((criptografia->GetSelection()))).mb_str());
+
+            if(str == "SDES_ECB"){
+                choice = Manager::Sdes_ECB;
+            }
+            else if(str == "SDES_CBC"){
+                choice = Manager::Sdes_CBC;
+            }
+            else if(str == "RC4"){
+                choice = Manager::Rc4;
+            }
+
             // Atribuir a chave de criptografia
             if(!(dhCheckBox->IsChecked())) {
-                manager.set_key(std::string(chave->GetValue()),resolve_encoding());
+                std::cout << "\tkey: " << std::string(chave->GetValue())<< std::endl << "\tmode: " << (int)choice << std::endl;
+                manager.set_key(std::string(chave->GetValue()),choice);
             }
             else{
-                manager.key_exchange(resolve_encoding());
+                std::cout << "\tkey:" << std::string(chave->GetValue())<< std::endl << "\tmode: " << "key exchange" << std::endl;
+                manager.key_exchange(choice);
             }
+
+            wxSleep(2);
         }
 
         // Método para o evento enviar
@@ -69,7 +76,7 @@ class Chat : public wxFrame, public wxThread {
             }
 
             // Enviar a mensagem
-            if(!manager.dispatch(mensagem->GetValue().ToStdString(), resolve_encoding())) {
+            if(!manager.dispatch(mensagem->GetValue().ToStdString(),choice)) {
                 wxMessageBox(wxT("Erro: Não foi possível enviar a mensagem."), wxT("Erro: Não foi possível enviar a mensagem."), wxICON_ERROR | wxOK);
                 return;
             }
@@ -228,7 +235,8 @@ class Chat : public wxFrame, public wxThread {
                 std::string message;
                 std::string ip;
 
-                std::tie(received, message, ip) = manager.receive(resolve_encoding());
+                std::cout << choice << std::endl;
+                std::tie(received, message, ip) = manager.receive(choice);
 
                 if(received) {
                     wxMutexGuiEnter();
@@ -242,7 +250,6 @@ class Chat : public wxFrame, public wxThread {
                     // Rolagem automática do display
                     mensagemDisplay->ShowPosition(mensagemDisplay->GetLastPosition());
                 }
-                wxThread::Sleep(100);
             }
 
             return nullptr;

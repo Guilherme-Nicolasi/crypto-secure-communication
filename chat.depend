@@ -58,7 +58,7 @@
 	<cstring>
 	<cmath>
 
-1688251845 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/gui.cpp
+1688587898 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/gui.cpp
 	<wx/wxprec.h>
 	<wx/wx.h>
 	<wx/sizer.h>
@@ -68,6 +68,7 @@
 	<wx/richtext/richtextctrl.h>
 	<wx/choice.h>
 	<wx/thread.h>
+	<iostream>
 	"manager.h"
 
 1688582898 /home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/manager.h
@@ -90,7 +91,7 @@
 	<iostream>
 	<cstring>
 
-1688583555 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/manager.cpp
+1688587812 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/manager.cpp
 	"manager.h"
 
 1688577041 source:/home/gabriel/Documents/unifesp/SC/L4/crypto-secure-communication/rc4.cpp
