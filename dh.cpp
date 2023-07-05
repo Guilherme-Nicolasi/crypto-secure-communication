@@ -1,15 +1,16 @@
 #include "dh.h"
 
-DH::DH(unsigned long long prime, unsigned long long primitiveRoot, unsigned long long privateKey) {
+DH::DH(int prime, int primitiveRoot, int privateKey) {
     p = prime;
     g = primitiveRoot;
     x = privateKey;
 }
 
-unsigned long long DH::PublicKey() {
-    return static_cast<unsigned long long>(std::pow(g, x)) % p;
+int DH::PublicKey() {
+    return static_cast<int>(std::pow(g, x)) % p;
 }
 
-void DH::SharedKey(unsigned long long destPublicKey) {
-    sharedKey = static_cast<unsigned long long>(std::pow(destPublicKey, x)) % p;
+int DH::SharedKey(int destPublicKey) {
+    sharedKey = static_cast<int>(std::pow(destPublicKey, x)) % p;
+    return sharedKey;
 }

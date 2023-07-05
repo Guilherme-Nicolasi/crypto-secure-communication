@@ -29,22 +29,24 @@ class Manager {
         bool ip_valid(const std::string& ip);
         std::string random(int bytes);
         int getSharedKey();
+        int getPublicKey();
         bool start_server();
         Manager();
         ~Manager();
+
         enum encoding {
-            Sdes,
+            Sdes_ECB,
+            Sdes_CBC,
             Rc4,
-            Dh
+            None
         };
-        enum smode {
-            ECB = S_DES::ECB,
-            CBC = S_DES::CBC
-        };
+
         bool set_ip(const std::string& ip);
         bool set_key(const std::string& key, encoding choice);
-        bool dispatch(const std::string& plain, encoding choice, smode mode);
-        std::tuple<bool, std::string, std::string> receive(encoding choice, smode mode);
+        bool dispatch(const std::string& plain, encoding choice);
+        std::tuple<bool, std::string, std::string> receive(encoding choice);
+        bool key_exchange(encoding choice);
 };
 
 #endif // MANAGER_H
+
