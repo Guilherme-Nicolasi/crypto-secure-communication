@@ -28,11 +28,6 @@ class Chat : public wxFrame, public wxThread {
 
         // Método para o evento enviar
         void BotaoConfigurar(wxCommandEvent& event) {
-            /*if(!isSelected) {
-                chaveCripto = chave->GetValue();
-            } else {
-                chaveCripto = std::to_string(manager.getSharedKey());
-            }*/
             // Verificar se o IP destino é válido
             if(!manager.ip_valid(destino->GetValue().ToStdString())) {
                 wxMessageBox("Erro: IP destino inválido.", wxT("Erro: IP destino inválido."), wxICON_ERROR | wxOK);
@@ -47,22 +42,27 @@ class Chat : public wxFrame, public wxThread {
 
             // Atribuir a chave de criptografia
             if(!(dhCheckBox->IsChecked())) {
+                statusDh = false;
                 if(!manager.set_key((chave->GetValue()).ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4)) {
-                    wxMessageBox("Erro: Não foi possível atribuir a chave.", wxT("Erro: Não foi possível atribuir a chave."), wxICON_ERROR | wxOK);
+                    wxMessageBox("Erro: Não foi possível atribuir a chave diretamente.", wxT("Erro: Não foi possível atribuir a chave diretamente."), wxICON_ERROR | wxOK);
                     return;
                 }
             } else {
-                if(!(criptografia->GetString(criptografia->GetSelection()) == wxT("RC4"))) {
-                    wxMessageBox("Erro: Mude a criptografia para RC4.", wxT("Erro: Mude a criptografia para RC4."), wxICON_ERROR | wxOK);
-                    return;
-                }
-
                 if(!(statusDh)) {
-                    manager.dispatch(nullptr, Manager::Dh, Manager::CBC);
+                    if(!manager.dispatch(std::to_string(manager.getPublicKey()), Manager::Dh, Manager::CBC)) {
+                        wxMessageBox(wxT("Erro: Não foi possível enviar a chave pública."), wxT("Erro: Não foi possível enviar a chave pública."), wxICON_ERROR | wxOK);
+                        return;
+                    }
+
                     std::ostream stream(chave);
                     stream << std::to_string(manager.getSharedKey());
                     statusDh = true;
-                } else if(!(dhCheckBox->IsChecked())) statusDh = false;
+
+                    if(!manager.set_key((chave->GetValue()).ToStdString(), (criptografia->GetString(criptografia->GetSelection()) == wxT("SDES")) ? Manager::encoding::Sdes : Manager::encoding::Rc4)) {
+                        wxMessageBox("Erro: Não foi possível atribuir a chave compartilhada.", wxT("Erro: Não foi possível atribuir a chave compartilhada."), wxICON_ERROR | wxOK);
+                        return;
+                    }
+                }
             }
         }
 
@@ -224,12 +224,12 @@ class Chat : public wxFrame, public wxThread {
             SetSizer(mainSizer);
 
             // Registrar os eventos dos text box, selection list e do button
-            configurar->Bind(wxEVT_BUTTON, &Chat::BotaoConfigurar, this);
             mensagem->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             destino->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             criptografia->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             modeSdes->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
             chave->Bind(wxEVT_TEXT_ENTER, &Chat::BotaoEnviar, this);
+            configurar->Bind(wxEVT_BUTTON, &Chat::BotaoConfigurar, this);
             enviar->Bind(wxEVT_BUTTON, &Chat::BotaoEnviar, this);
 
             // Cria a thread para recebimento de mensagem

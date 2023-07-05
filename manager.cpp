@@ -89,16 +89,20 @@ int Manager::getSharedKey() {
     return sharedKey;
 }
 
+int Manager::getPublicKey() {
+    return publicKey;
+}
+
 Manager::Manager() {
     destination.sin_family = AF_INET;
     destination.sin_port = htons(3000);
     local_server_socket = -1;
 
     int prime = 12;
-    int generator = 18;
+    int primitiveRoot = 18;
     int privateKey = 22;
 
-    dh.set_DH(prime, generator, privateKey);
+    dh.set_DH(prime, primitiveRoot, privateKey);
     publicKey = dh.PublicKey();
 }
 
@@ -131,6 +135,9 @@ bool Manager::set_key(const std::string& key, Manager::encoding choice) {
                 std::cerr << "\nSDES key should be numeric\n";
                 return false;
             }
+        break;
+        case Dh:
+            return false;
         break;
     }
 
@@ -168,31 +175,44 @@ bool Manager::dispatch(const std::string& plain, Manager::encoding choice, Manag
     std::string cipher;
     switch(choice) {
         case Sdes:
-            cipher = sdes.encode(plain, (S_DES::mode)mode);
+            cipher = sdes.encode(plain, static_cast<S_DES::mode>(mode));
         break;
         case Rc4:
             cipher = rc4.encode(plain);
         break;
         case Dh:
-            send(local_server_socket, std::to_string(publicKey).c_str(), std::to_string(publicKey).size(), 0);
+            if(plain.empty()) {
+                // Receber a chave pública
+                char publicKeyBuf[4096];
 
-            char publicKeyBuffer[4096];
+                bool status = false;
+                std::string key;
+                std::string client_ip = "0";
+                char destination_ip[INET_ADDRSTRLEN];
 
-            bool status = false;
-            std::string key;
-            std::string client_ip = "0";
+                inet_ntop(AF_INET, &(destination.sin_addr), destination_ip, INET_ADDRSTRLEN);
+                std::string destination_str(destination_ip);
 
-            char destination_ip[INET_ADDRSTRLEN];
-            inet_ntop(AF_INET,&(destination.sin_addr),destination_ip,INET_ADDRSTRLEN);
-            std::string destination_str(destination_ip);
+                while(client_ip != destination_str)
+                    std::tie(status, key, client_ip) = receive(Dh, Manager::CBC);
 
-            while(client_ip != destination_str)
-                std::tie(status,key,client_ip) = receive(Dh,Manager::CBC);
+                std::string publicKeyStr(publicKeyBuf, std::stoi(key));
+                publicKeyStr = publicKeyStr.substr(0, std::stoi(key));
 
-            int destPublicKey = std::stoi(key);
-            sharedKey = dh.SharedKey(destPublicKey);
-            return true;
+                publicKey = std::stoi(publicKeyStr);
 
+                // Calcular a chave compartilhada
+                sharedKey = dh.SharedKey(publicKey);
+
+                return true;
+            } else {
+                // Enviar a chave pública
+                publicKey = dh.PublicKey();
+                std::string publicKeyStr = std::to_string(publicKey);
+                send(sockfd, publicKeyStr.c_str(), publicKeyStr.size(), 0);
+
+                return true;
+            }
     }
 
     int status = send(sockfd, cipher.c_str(), cipher.size(), 0);
